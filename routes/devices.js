@@ -3,7 +3,7 @@ const router = express.Router({ mergeParams: true });
 const Device = require('../models/Device');
 const pick = require('../utils/pick');
 
-const FIELDS = ['name', 'status', 'power'];
+const FIELDS = ['name', 'status', 'power'];  
 
 // Middleware: busca la máquina de la URL, comprobando que pertenece a la guarida (req.lair)
 function loadDevice(req, res, next) {
