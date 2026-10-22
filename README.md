@@ -34,7 +34,7 @@ supervillain-api/
 ├── bin/www           arranque del servidor (express-generator)
 ├── models/           Villain.js, Lair.js, Minion.js, Device.js (esquemas Mongoose)
 ├── routes/           villains.js > lairs.js > minions.js / devices.js (routers anidados)
-├── utils/            asyncHandler, pick, httpError
+├── utils/            pick
 ├── scripts/seed.js   datos de ejemplo
 └── test/             pruebas de integración
 ```
@@ -73,6 +73,6 @@ MONGODB_URI_TEST="mongodb+srv://<USER>:<PASSWORD>@<CLUSTER>.mongodb.net/villainl
 No uses nunca la base de datos real.
 
 ## Diferencias con las diapositivas
-- Los routers usan `router.param` y un `asyncHandler`, así que los errores de validación y de id llegan al manejador de `app.js` en lugar de repetir `try/catch` en cada ruta.
+- Cada router define un middleware normal (`loadVillain`, `loadLair`, `loadMinion`, `loadDevice`) que busca el recurso de la URL y lo guarda en `req`; se pone delante de las rutas que lo necesitan. Las consultas usan `.then()` y terminan en `.catch(next)`, así que los errores de validación y de id llegan al manejador de `app.js` sin repetir `try/catch` en cada ruta.
 - Se completan los `PUT` y `DELETE` de todos los recursos y se comprueba que cada guarida, esbirro o máquina pertenece al padre de la URL.
 - Los `POST` y `PUT` solo aceptan los campos del modelo (el resto del cuerpo se ignora).

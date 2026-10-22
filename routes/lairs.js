@@ -6,54 +6,61 @@ const Minion = require('../models/Minion');
 const Device = require('../models/Device');
 const minionsRouter = require('./minions');
 const devicesRouter = require('./devices');
-const asyncHandler = require('../utils/asyncHandler');
-const httpError = require('../utils/httpError');
 const pick = require('../utils/pick');
 
 const FIELDS = ['name', 'location'];
 
-// Carga la guarida de la URL y comprueba que pertenece al villano de la ruta
-router.param('lairId', asyncHandler(async (req, res, next, id) => {
-  req.lair = await Lair.findOne({ _id: id, villain: req.villain._id });
-  if (!req.lair) throw httpError(404, "Guarida no encontrada");
-  next();
-}));
+// Middleware: busca la guarida de la URL, comprobando que pertenece al villano (req.villain)
+function loadLair(req, res, next) {
+  Lair.findOne({ _id: req.params.lairId, villain: req.villain._id })
+    .then((lair) => {
+      if (!lair) return res.status(404).json({ error: "Guarida no encontrada" });
+      req.lair = lair;
+      next();
+    })
+    .catch(next);
+}
 
 // Anidación de 3er nivel: esbirros y máquinas dentro de una guarida
-router.use('/:lairId/minions', minionsRouter);
-router.use('/:lairId/devices', devicesRouter);
+router.use('/:lairId/minions', loadLair, minionsRouter);
+router.use('/:lairId/devices', loadLair, devicesRouter);
 
 // GET: listar guaridas de un villano específico
-router.get('/', asyncHandler(async (req, res) => {
-  const lairs = await Lair.find({ villain: req.villain._id });
-  res.json({ message: `Guaridas del villano ${req.villain.name}`, data: lairs });
-}));
+router.get('/', (req, res, next) => {
+  Lair.find({ villain: req.villain._id })
+    .then((lairs) => res.json({ message: `Guaridas del villano ${req.villain.name}`, data: lairs }))
+    .catch(next);
+});
 
 // POST: construir nueva guarida (el villano sale de la URL, no del cuerpo)
-router.post('/', asyncHandler(async (req, res) => {
-  const lair = await Lair.create({ ...pick(req.body, FIELDS), villain: req.villain._id });
-  res.status(201).json({ message: "Nueva guarida secreta construida. Shhh.", data: lair });
-}));
+router.post('/', (req, res, next) => {
+  Lair.create({ ...pick(req.body, FIELDS), villain: req.villain._id })
+    .then((lair) => res.status(201).json({ message: "Nueva guarida secreta construida. Shhh.", data: lair }))
+    .catch(next);
+});
 
 // GET: una guarida, con los datos de su villano
-router.get('/:lairId', asyncHandler(async (req, res) => {
-  await req.lair.populate('villain');
-  res.json(req.lair);
-}));
+router.get('/:lairId', loadLair, (req, res, next) => {
+  req.lair.populate('villain')
+    .then((lair) => res.json(lair))
+    .catch(next);
+});
 
 // PUT: reformar una guarida
-router.put('/:lairId', asyncHandler(async (req, res) => {
+router.put('/:lairId', loadLair, (req, res, next) => {
   req.lair.set(pick(req.body, FIELDS));
-  await req.lair.save();
-  res.json({ message: "Guarida reformada. Ahora con más trampillas.", data: req.lair });
-}));
+  req.lair.save()
+    .then((lair) => res.json({ message: "Guarida reformada. Ahora con más trampillas.", data: lair }))
+    .catch(next);
+});
 
 // DELETE: demoler una guarida con sus esbirros y máquinas
-router.delete('/:lairId', asyncHandler(async (req, res) => {
-  await Minion.deleteMany({ lair: req.lair._id });
-  await Device.deleteMany({ lair: req.lair._id });
-  await req.lair.deleteOne();
-  res.json({ message: "Guarida demolida. Solo quedan cenizas." });
-}));
+router.delete('/:lairId', loadLair, (req, res, next) => {
+  Minion.deleteMany({ lair: req.lair._id })
+    .then(() => Device.deleteMany({ lair: req.lair._id }))
+    .then(() => req.lair.deleteOne())
+    .then(() => res.json({ message: "Guarida demolida. Solo quedan cenizas." }))
+    .catch(next);
+});
 
 module.exports = router;
