@@ -27,7 +27,7 @@ router.use('/:villainId/lairs', loadVillain, lairsRouter);
 // GET: listar todos los villanos
 router.get('/', (req, res, next) => {
   Villain.find()
-    .then((villains) => res.json({ message: "Sindicato del mal super cargado", data: villains }))
+    .then((villains) => res.json({ message: "Sindicato del mal super cargado!!!", data: villains }))
     .catch(next);
 });
 
